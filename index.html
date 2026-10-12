@@ -17,8 +17,15 @@
 
   #v1{flex:1;display:flex;flex-wrap:wrap;gap:8px;padding:10px;justify-content:center;align-content:center}
   #v1 button{padding:10px 14px;font-size:clamp(14px,3vw,22px)}
-  #v2{flex:1;min-height:0;display:flex;flex-direction:column}
 
+  #v3{flex:1;min-height:0;display:flex;flex-direction:column}
+  #rl{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px;padding:8px;align-content:start}
+  .rc{padding:8px 6px;font-size:15px;font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#14532d;border:2px solid #16a34a}
+  .rc span{display:inline-block;width:1.2em;font-weight:800}
+  .rc.off{background:var(--card);border-color:transparent;color:#64748b;text-decoration:line-through}
+  #go{flex:1;background:var(--gold);color:#111;font-weight:800;font-size:20px;padding:10px}
+
+  #v2{flex:1;min-height:0;display:flex;flex-direction:column}
   .top{display:flex;flex-wrap:wrap;gap:4px;padding:6px 6px 0;align-items:center}
   .top .sp{flex:1}
   .top button{padding:4px 9px;font-size:14px;color:var(--muted)}
@@ -26,7 +33,7 @@
   #gm.on{background:var(--red);color:#fff}
   .modes{display:flex;gap:2px;background:var(--card);border-radius:10px;padding:2px}
   .modes button{background:transparent;padding:3px 8px}
-  .top2 .lab{color:var(--muted);font-size:13px;padding:0 2px}
+  .lab{color:var(--muted);font-size:13px;padding:0 2px}
 
   #stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8px;min-height:0}
   #nm{text-align:center;font-weight:700;color:var(--gold);font-size:clamp(22px,min(15vw,24vh),90px);line-height:1.05}
@@ -44,18 +51,16 @@
   .ht.h{background:linear-gradient(90deg,#ef4444 50%,#475569 50%);-webkit-background-clip:text;background-clip:text;color:transparent}
   .ht.crack{animation:crack .6s ease-out}
 
-  #board{flex:1;min-height:0;overflow:auto;display:grid;gap:5px;padding:4px 8px;align-content:start}
-  .v #board{grid-template-columns:repeat(var(--cols,1),minmax(0,1fr))}
-  .h #board{grid-template-columns:repeat(auto-fill,minmax(122px,1fr))}
-  .chip{background:var(--card);border:2px solid transparent;border-radius:10px;cursor:pointer;min-width:0;display:flex}
-  .chip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .chip .hh{white-space:nowrap}
-  .v .chip{flex-direction:row;align-items:center;justify-content:space-between;gap:6px;padding:3px 8px}
-  .v .chip b{font-size:15px}
-  .v .chip .hh{font-size:15px;letter-spacing:1px}
-  .h .chip{flex-direction:column;align-items:center;padding:4px 6px}
-  .h .chip b{font-size:14px;max-width:100%}
-  .h .chip .hh{font-size:14px;letter-spacing:1px}
+  /* everybody visible: one column (hochkant) or one row (breit) – never scrolls */
+  #board{flex:1;min-height:0;overflow:hidden;display:flex;gap:4px;padding:4px 8px;font-size:var(--fs,14px)}
+  .v #board{flex-direction:column}
+  .h #board{flex-direction:row;justify-content:center}
+  .chip{background:var(--card);border:2px solid transparent;border-radius:9px;cursor:pointer;min-width:0;min-height:0;display:flex;overflow:hidden}
+  .chip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-size:1em}
+  .chip .hh{white-space:nowrap;font-size:.95em;line-height:1}
+  .v .chip{flex:1 1 0;max-height:46px;flex-direction:row;align-items:center;justify-content:space-between;gap:6px;padding:0 8px}
+  .h .chip .hh{font-size:var(--hfs,13px)}
+  .h .chip{flex:1 1 0;max-width:180px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px 3px}
   .chip.cur{border-color:var(--gold);box-shadow:0 0 10px #fbbf2466;background:#2b3a52}
   .chip.out{opacity:.45}
   .chip.out b{text-decoration:line-through}
@@ -74,10 +79,21 @@
 </head>
 <body>
 <div id="app">
+  <!-- 1: choose class -->
   <div id="v1"></div>
+
+  <!-- 2: who is here? -->
+  <div id="v3" hidden>
+    <div class="top"><button id="rb" title="Andere Klasse">◂</button><span class="lab" id="rt"></span><span class="sp"></span><button id="ra">Alle da</button></div>
+    <div id="rl"></div>
+    <div class="bot"><button id="go">Los ▶</button></div>
+  </div>
+
+  <!-- 3: play -->
   <div id="v2" hidden>
     <div class="top">
       <button id="chg" title="Klasse wechseln"></button>
+      <button id="at" title="Wer ist da? (Fehlende abwählen)">👥</button>
       <span class="sp"></span>
       <div class="modes">
         <button data-m="order"  title="Der Reihe nach">➡️</button>
@@ -87,7 +103,7 @@
       <button id="gm" title="Spielmodus mit Leben">♥</button>
       <button id="pip" title="Als schwebendes Fenster über allem anzeigen">⧉</button>
     </div>
-    <div class="top top2" id="top2" hidden>
+    <div class="top" id="top2" hidden>
       <span class="lab">Leben:</span>
       <div class="modes" id="sl">
         <button data-n="1">1♥</button><button data-n="2">2♥</button><button data-n="3">3♥</button>
@@ -111,7 +127,7 @@
 
 <script>
 const CLASSES = {
-  "S-De-x1a": ["Alice", "Feodor", "Freddie", "Archi", "Zara F.", "Oscar", "Zara M.", "Nicholas", "Barron", "Edward", "Conor", "Isabel", "Fred", "Tom"],
+  "S-De-x1a": ["Alice", "Theo", "Freddie", "Archi", "Zara F.", "Oscar", "Zara M.", "Nicholas", "Barron", "Edward", "Conor", "Isabel", "Fred", "Tom"],
   "S-De-x2a": ["Roscoe", "Arabella D.", "Bay", "Felix", "Arabella H.", "Mason", "Ali", "Ruben", "Charles", "Louis", "Toby", "Jack"],
   "S-De-y1a": ["Jack", "Oscar", "Rafe", "Freddie", "Willoughby", "Algy", "Oliver D.", "Monty", "Zoe", "Annabel", "Ava", "Stefan", "Tom", "Tal", "Ivo", "Eloise", "Oliver U.", "Alfie", "Stella", "Archie", "Luca"],
   "R-De-1": ["Viva", "Arabella", "Willa", "Nessie", "Lucy", "Jasper", "Rex", "Louisa", "Iona", "Paulo", "Ndishu", "Jessy", "Scarlett", "Facundo", "Olivia", "Benji"],
@@ -129,17 +145,20 @@ const $ = id => id === "app" ? APP : APP.querySelector("#" + id);   // works in 
 const shuffle = a => { for (let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
 
 const MAXL = 5;                                  // bonus lives allowed up to 5
-let cls = null;
+let cls = null, view = "class";                  // view: class | roster | play
 let mode   = lsGet("omode") || "random";         // order | random | round
 let start  = +lsGet("start") || 3;               // starting lives 1 | 2 | 3
 let orient = lsGet("orient") || "v";             // v = hochkant, h = breit
 let gameOn = false, hist = [], idx = -1, pool = [], recent = [], ordIdx = -1, pipWin = null;
 const LIVES = {};                                // LIVES[class][name] = lives (steps of 0.5)
-const getL = (c,n) => (LIVES[c] && LIVES[c][n] !== undefined) ? LIVES[c][n] : start;
-const setL = (c,n,v) => { (LIVES[c] = LIVES[c] || {})[n] = v; };
-const alive = c => CLASSES[c].filter(n => getL(c,n) > 0);
-const total = () => CLASSES[cls].length;
-const over = () => { if (!gameOn) return false; const a = alive(cls).length; return a === 0 || (a === 1 && total() > 1); };
+const ABSENT = {};                               // ABSENT[class] = Set of names not here today
+const rosterOf = c => CLASSES[c].filter(n => !(ABSENT[c] && ABSENT[c].has(n)));
+const list  = () => rosterOf(cls);
+const getL  = (c,n) => (LIVES[c] && LIVES[c][n] !== undefined) ? LIVES[c][n] : start;
+const setL  = (c,n,v) => { (LIVES[c] = LIVES[c] || {})[n] = v; };
+const alive = c => rosterOf(c).filter(n => getL(c,n) > 0);
+const total = () => list().length;
+const over  = () => { if (!gameOn) return false; const a = alive(cls).length; return a === 0 || (a === 1 && total() > 1); };
 const pulse = (el, c) => { el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };
 const hearts = (l, crackAt = -1) => {
   let h = ""; const slots = Math.max(start, Math.ceil(l));
@@ -149,13 +168,12 @@ const hearts = (l, crackAt = -1) => {
 
 // ---- choosing the next name ----
 function pickName(){
-  const base = gameOn ? alive(cls) : CLASSES[cls];
+  const L = list(), base = gameOn ? alive(cls) : L;
   if (!base.length) return null;
   if (mode === "order") {
-    const list = CLASSES[cls];
-    for (let k = 1; k <= list.length; k++) {
-      const j = (ordIdx + k) % list.length;
-      if (base.includes(list[j])) { ordIdx = j; return list[j]; }
+    for (let k = 1; k <= L.length; k++) {
+      const j = (ordIdx + k) % L.length;
+      if (base.includes(L[j])) { ordIdx = j; return L[j]; }
     }
     return null;
   }
@@ -173,15 +191,33 @@ function pickName(){
 }
 
 // ---- drawing ----
+function fit(){                                  // sizes the names so that ALL fit in one column / one row
+  if (view !== "play" || !gameOn) return;
+  const b = $("board"), n = total(); if (!n || !b.clientWidth) return;
+  const maxLen = Math.min(14, Math.max(...list().map(x => x.length)));
+  let fs;
+  if (orient === "v") {
+    const rowH = (b.clientHeight - 8 - (n-1)*4) / n;
+    fs = Math.min(18, rowH * .52, (b.clientWidth - 40) / (maxLen*.6 + 3.2));
+    b.style.setProperty("--fs", Math.max(8, fs).toFixed(1) + "px");
+  } else {                                       // breit: every name gets the biggest size that fits its own box
+    const colW = (b.clientWidth - 16 - (n-1)*4) / n;
+    b.style.setProperty("--hfs", Math.max(8, Math.min(16, (colW - 8) / 3.4)).toFixed(1) + "px");
+    [...b.children].forEach(c => {
+      const t = c.querySelector("b"), len = t.textContent.length;
+      t.style.fontSize = Math.max(8, Math.min(18, (colW - 8) / (len * .58))).toFixed(1) + "px";
+    });
+  }
+}
+
 function renderBoard(){
-  const cur = hist[idx], al = alive(cls);
+  const cur = hist[idx], al = alive(cls), L = list();
   const lead = (al.length === 1 && total() > 1) ? al[0] : null;
-  $("board").style.setProperty("--cols", total() > 14 ? 2 : 1);
-  $("board").innerHTML = CLASSES[cls].map((n,i) => {
+  $("board").innerHTML = L.map((n,i) => {
     const l = getL(cls,n);
     return `<div class="chip${l<=0?" out":""}${n===cur?" cur":""}${n===lead?" lead":""}" data-i="${i}"><b>${l<=0?"💀 ":""}${n}</b><span class="hh">${hearts(l)}</span></div>`;
   }).join("");
-  const c = $("board").querySelector(".cur"); if (c && c.scrollIntoView) c.scrollIntoView({block:"nearest"});
+  fit();
 }
 
 function show(anim){
@@ -194,12 +230,18 @@ function show(anim){
     if (al.length === 1 && total() > 1) { nm.textContent = "🏆 " + al[0]; nm.className = "win"; $("hs").innerHTML = hearts(getL(cls, al[0])); return; }
   }
   if (n === undefined) { nm.textContent = "?"; return; }
-  ordIdx = CLASSES[cls].indexOf(n);            // "der Reihe nach" continues from whoever is shown
+  ordIdx = list().indexOf(n);                  // "der Reihe nach" continues from whoever is shown
   const l = getL(cls, n), out = gameOn && l <= 0;
   nm.textContent = (out ? "💀 " : "") + n;
   if (out) nm.classList.add("out");
   if (gameOn) $("hs").innerHTML = hearts(l, anim === "loss" ? Math.floor(l) : -1);
   if (anim === "loss") { pulse(nm, "shake"); pulse($("app"), "flash"); }
+}
+
+function renderRoster(){
+  const ab = ABSENT[cls] || new Set(), all = CLASSES[cls];
+  $("rl").innerHTML = all.map((n,i) => `<button class="rc${ab.has(n)?" off":""}" data-i="${i}"><span>${ab.has(n)?"✗":"✓"}</span>${n}</button>`).join("");
+  $("rt").textContent = cls + " · " + (all.length - ab.size) + "/" + all.length + " da";
 }
 
 // ---- actions ----
@@ -219,36 +261,52 @@ const adjust = d => {
 };
 
 const sizeFor = () => {
-  if (!cls) return [360, 210];
+  const aw = (screen.availWidth || 1300) - 30, ah = (screen.availHeight || 900) - 50;
+  if (view === "class")  return [360, 210];
+  if (view === "roster") return [Math.min(aw, 460), Math.min(ah, 190 + Math.ceil((cls ? CLASSES[cls].length : 9) / 3) * 44)];
   if (!gameOn) return [320, 170];
-  const n = total(), maxW = (screen.availWidth || 1300) - 40, maxH = (screen.availHeight || 900) - 60;
-  if (orient === "v") { const cols = n > 14 ? 2 : 1, rows = Math.ceil(n / cols); return [Math.min(maxW, cols*250 + 40), Math.min(maxH, 290 + rows*32)]; }
-  const w = Math.min(maxW, 1000), per = Math.max(1, Math.floor((w - 16) / 128)), rows = Math.ceil(n / per);
-  return [w, Math.min(maxH, 270 + rows*50)];
+  const n = total();
+  if (orient === "v") return [290, Math.min(ah, 250 + n*34)];             // one column
+  return [Math.min(aw, Math.max(720, n*100 + 30)), 330];                 // one row
 };
-const resizePip = () => { if (!pipWin) return; const [w,h] = sizeFor(); try { pipWin.resizeTo(w,h); } catch(e) {} };
+const resizePip = () => { if (!pipWin) return; const [w,h] = sizeFor(); try { pipWin.resizeTo(w,h); } catch(e) {} setTimeout(fit, 200); };
 
-const paintMode = () => APP.querySelectorAll(".modes [data-m]").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
+const setView = v => {
+  view = v;
+  $("v1").hidden = v !== "class"; $("v3").hidden = v !== "roster"; $("v2").hidden = v !== "play";
+  resizePip(); fit();
+};
+const paintMode  = () => APP.querySelectorAll(".modes [data-m]").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
 const paintStart = () => APP.querySelectorAll("#sl button").forEach(b => b.classList.toggle("on", +b.dataset.n === start));
-const paintGame = () => {
+const paintGame  = () => {
   $("gm").classList.toggle("on", gameOn);
   $("gm").textContent = gameOn ? "♥ " + start : "♥";
   ["top2","hs","board","m1","m2","p2","p1"].forEach(id => $(id).hidden = !gameOn);
   $("app").classList.toggle("lives", gameOn);
   $("app").classList.toggle("v", orient === "v"); $("app").classList.toggle("h", orient === "h");
   $("or").textContent = orient === "v" ? "⬍ hochkant" : "⬌ breit";
-  paintStart(); resizePip();
+  paintStart(); resizePip(); fit();
 };
 
+// class -> roster -> play
 $("v1").innerHTML = Object.keys(CLASSES).map(c => `<button data-c="${c}">${c}</button>`).join("");
-$("v1").querySelectorAll("button").forEach(b => b.onclick = () => {
-  cls = b.dataset.c;
+$("v1").querySelectorAll("button").forEach(b => b.onclick = () => { cls = b.dataset.c; $("chg").textContent = "◂ " + cls; renderRoster(); setView("roster"); });
+$("rb").onclick = () => setView("class");
+$("rl").onclick = e => {
+  const b = e.target.closest(".rc"); if (!b) return;
+  const n = CLASSES[cls][+b.dataset.i], ab = ABSENT[cls] = ABSENT[cls] || new Set();
+  ab.has(n) ? ab.delete(n) : ab.add(n);
+  renderRoster();
+};
+$("ra").onclick = () => { ABSENT[cls] = new Set(); renderRoster(); };
+$("go").onclick = () => {
+  if (!list().length) return;
   pool = []; recent = []; hist = []; idx = -1; ordIdx = -1;
-  $("v1").hidden = true; $("v2").hidden = false;
-  $("chg").textContent = "◂ " + cls;
-  paintMode(); paintGame(); down();
-});
-$("chg").onclick = () => { cls = null; $("v2").hidden = true; $("v1").hidden = false; resizePip(); };
+  setView("play"); paintMode(); paintGame(); down();
+};
+$("at").onclick = () => { renderRoster(); setView("roster"); };
+$("chg").onclick = () => setView("class");
+
 APP.querySelectorAll(".modes [data-m]").forEach(b => b.onclick = () => { mode = b.dataset.m; lsSet("omode", mode); pool = []; recent = []; paintMode(); });
 $("gm").onclick = () => { gameOn = !gameOn; pool = []; recent = []; paintGame(); show(); };
 APP.querySelectorAll("#sl button").forEach(b => b.onclick = () => {
@@ -263,13 +321,13 @@ $("m1").onclick = () => adjust(-1); $("m2").onclick = () => adjust(-.5);
 $("p2").onclick = () => adjust(.5); $("p1").onclick = () => adjust(1);
 $("board").onclick = e => {
   const c = e.target.closest(".chip"); if (!c) return;
-  const i = +c.dataset.i, n = CLASSES[cls][i];
+  const i = +c.dataset.i, n = list()[i];
   if (hist[idx] !== n) { hist.length = idx + 1; hist.push(n); idx = hist.length - 1; }
   ordIdx = i; pool = pool.filter(x => x !== n); show();
 };
 
 const onKey = e => {
-  if (!cls) return;
+  if (view !== "play") return;
   if (["Space","Enter","ArrowDown","ArrowRight"].includes(e.code)) { e.preventDefault(); down(); }
   if (["ArrowUp","ArrowLeft"].includes(e.code)) { e.preventDefault(); up(); }
   if (["Minus","NumpadSubtract"].includes(e.code)) { e.preventDefault(); adjust(-1); }
@@ -278,6 +336,7 @@ const onKey = e => {
   if (e.code === "BracketRight") { e.preventDefault(); adjust(.5); }
 };
 document.addEventListener("keydown", onKey);
+window.addEventListener("resize", fit);
 
 // ---- floating always-on-top window (Edge/Chrome on Windows) ----
 $("pip").onclick = async () => {
@@ -291,7 +350,9 @@ $("pip").onclick = async () => {
   pw.document.head.append(st);
   pw.document.body.append(APP);
   pw.document.addEventListener("keydown", onKey);
-  pw.addEventListener("pagehide", () => { document.body.append(APP); pipWin = null; });
+  pw.addEventListener("resize", fit);
+  pw.addEventListener("pagehide", () => { document.body.append(APP); pipWin = null; setTimeout(fit, 100); });
+  setTimeout(fit, 100);
 };
 
 paintMode(); paintGame();
