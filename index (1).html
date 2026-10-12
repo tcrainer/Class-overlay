@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zahlen · Shell</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--ink:#f8fafc;--muted:#94a3b8;--accent:#fbbf24;--accent2:#38bdf8}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column}
+  header{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:16px}
+  .seg{display:flex;background:var(--card);border-radius:999px;padding:4px}
+  .seg button{border:0;background:transparent;color:var(--muted);font-size:18px;padding:10px 20px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#111}
+  .seg.blue button.on{background:var(--accent2);color:#111}
+  .seg.green button.on{background:#4ade80;color:#111}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:16px;text-align:center}
+  #num{font-size:min(38vw,320px);font-weight:800;line-height:1;color:var(--accent);letter-spacing:-.04em}
+  #name{font-size:min(12vw,96px);font-weight:600}
+  #hint{color:var(--muted);font-size:20px}
+  #next{font-size:32px;font-weight:700;padding:18px 48px;border:0;border-radius:16px;background:var(--ink);color:#111;cursor:pointer;margin-bottom:32px}
+  #next:active{transform:scale(.97)}
+  #left{color:var(--muted);font-size:16px;text-align:center;padding-bottom:12px}
+  #pip{position:fixed;top:12px;right:12px;background:transparent;color:var(--muted);border:1px solid var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px}
+  body.pip header{padding:6px;gap:4px}
+  body.pip .seg{flex-wrap:wrap;justify-content:center;border-radius:12px}
+  body.pip .seg button{font-size:12px;padding:4px 10px}
+  body.pip main{padding:4px;gap:0}
+  body.pip #name{font-size:min(18vw,48px)}
+  body.pip #num,body.pip #ranges,body.pip #modes,body.pip #hint,body.pip #left,body.pip #pip{display:none}
+  body.pip #next{font-size:16px;padding:8px 24px;margin:0 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="seg" id="classes"></div>
+  <div class="seg blue" id="ranges">
+    <button data-hi="10">0–10</button>
+    <button data-hi="20">0–20</button>
+    <button data-hi="0">nur Namen</button>
+  </div>
+  <div class="seg green" id="modes">
+    <button data-m="round">jeder einmal</button>
+    <button data-m="random">zufällig</button>
+  </div>
+</header>
+<main>
+  <div id="num">?</div>
+  <div id="name">Klasse wählen</div>
+  <div id="hint">Leertaste oder Klick = nächste</div>
+</main>
+<button id="next">Weiter ▶</button>
+<button id="pip" title="Als schwebendes Fenster über allem anzeigen">⧉ Overlay</button>
+<div id="left"></div>
+
+<script>
+const CLASSES = {
+  "S-De-x1a": ["Alice", "Feodor", "Freddie", "Archi", "Zara F.", "Oscar", "Zara M.", "Nicholas", "Barron", "Edward", "Conor", "Isabel", "Fred", "Tom"],
+  "S-De-x2a": ["Roscoe", "Arabella D.", "Bay", "Felix", "Arabella H.", "Mason", "Ali", "Ruben", "Charles", "Louis", "Toby", "Jack"],
+  "S-De-y1a": ["Jack", "Oscar", "Rafe", "Freddie", "Willoughby", "Algy", "Oliver D.", "Monty", "Zoe", "Annabel", "Ava", "Stefan", "Tom", "Tal", "Ivo", "Eloise", "Oliver U.", "Alfie", "Stella", "Archie", "Luca"],
+  "R-De-1": ["Viva", "Arabella", "Willa", "Nessie", "Lucy", "Jasper", "Rex", "Louisa", "Iona", "Paulo", "Ndishu", "Jessy", "Scarlett", "Facundo", "Olivia", "Benji"],
+  "H-De-1": ["Atty", "Max", "Edward", "Aubrey", "Freddy"],
+  "H-De-3": ["Eddie", "Reuben", "Sofia", "Katrina", "Spencer", "Matilda", "Caitlin"],
+  "L6-De-4": ["Michael", "Ina", "Oscar", "Cecilia", "Peter", "Charles", "Charlie"],
+  "L6-De-5dez": ["Patrick"],
+  "U6-De-4": ["Rafe", "Carys"]
+};
+
+let cls = localStorage.getItem("cls") || Object.keys(CLASSES)[0];
+const q = new URLSearchParams(location.search).get("hi");
+let hi  = q !== null ? +q : +(localStorage.getItem("hi") ?? 10);
+let mode = localStorage.getItem("mode") || "round";
+let pool = [];
+let recent = [];
+let lastNum = -1;
+let pipMode = false;
+
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+function buildClassButtons(){
+  $("classes").innerHTML = Object.keys(CLASSES).map(c=>`<button data-c="${c}">${c}</button>`).join("");
+  $("classes").querySelectorAll("button").forEach(b=>b.onclick=()=>{ cls=b.dataset.c; localStorage.setItem("cls",cls); pool=[]; recent=[]; paint(); });
+}
+$("ranges").querySelectorAll("button").forEach(b=>b.onclick=()=>{ hi=+b.dataset.hi; localStorage.setItem("hi",hi); paint(); });
+$("modes").querySelectorAll("button").forEach(b=>b.onclick=()=>{ mode=b.dataset.m; localStorage.setItem("mode",mode); pool=[]; recent=[]; paint(); });
+
+function paint(){
+  $("classes").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.c===cls));
+  $("ranges").querySelectorAll("button").forEach(b=>b.classList.toggle("on",+b.dataset.hi===hi));
+  $("modes").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));
+  $("num").style.display = hi ? "" : "none";
+  $("left").textContent = mode==="random" ? cls
+    : pool.length ? `${pool.length} noch dran in ${cls}` : `${cls}: alle einmal dran – neue Runde beim nächsten Klick`;
+}
+
+function pickName(){
+  if (mode === "random") {
+    const gap = Math.min(3, CLASSES[cls].length - 1);
+    const ok = CLASSES[cls].filter(n => !recent.includes(n));
+    const name = ok[Math.random()*ok.length|0];
+    recent.push(name); if (recent.length > gap) recent.shift();
+    return name;
+  }
+  if (!pool.length) pool = shuffle([...CLASSES[cls]]);
+  return pool.pop();
+}
+
+function next(){
+  $("name").textContent = pickName();
+  if (hi) {
+    let n;
+    do { n = Math.random()*(hi+1)|0; } while (n === lastNum);
+    lastNum = n;
+    $("num").textContent = n;
+  }
+  paint();
+}
+
+$("next").onclick = next;
+document.addEventListener("keydown", e => { if (e.code==="Space"||e.code==="Enter"||e.code==="ArrowRight"){ e.preventDefault(); next(); } });
+buildClassButtons(); paint();
+
+// Floating always-on-top overlay (Edge/Chrome on Windows): choose class once, then names only
+$("pip").onclick = async () => {
+  if (!("documentPictureInPicture" in window)) { alert("Overlay braucht Edge oder Chrome auf Windows."); return; }
+  const pw = await documentPictureInPicture.requestWindow({ width: 340, height: 210 });
+  pipMode = true;
+  const d = pw.document;
+  const st = d.createElement("style");
+  st.textContent = `
+    *{box-sizing:border-box}[hidden]{display:none!important}
+    body{margin:0;height:100vh;overflow:hidden;background:#0f172a;color:#f8fafc;font-family:system-ui,Segoe UI,Roboto,sans-serif;user-select:none}
+    button{border:0;border-radius:10px;background:#1e293b;color:#f8fafc;cursor:pointer;font-size:16px}
+    button:active{transform:scale(.96)}
+    #v1{display:flex;flex-wrap:wrap;gap:6px;padding:8px;justify-content:center;align-content:center;height:100%}
+    #v1 button{padding:10px 14px}
+    #v2{display:flex;flex-direction:column;height:100%}
+    .top{display:flex;justify-content:space-between;padding:6px 6px 0}
+    .top button{padding:4px 10px;font-size:14px;color:#94a3b8}
+    #nm{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8px;font-weight:700;color:#fbbf24;font-size:clamp(22px,17vw,72px);line-height:1.05}
+    .bot{display:flex;gap:6px;padding:6px}
+    .bot button{flex:1;font-size:22px;padding:8px;background:#f8fafc;color:#111}`;
+  d.head.append(st);
+  d.body.innerHTML = `<div id="v1"></div>
+    <div id="v2" hidden>
+      <div class="top"><button id="chg" title="Klasse wechseln"></button><button id="md"></button></div>
+      <div id="nm">?</div>
+      <div class="bot"><button id="up" title="zurück">▲</button><button id="dn" title="weiter">▼</button></div>
+    </div>`;
+  const g = id => d.getElementById(id);
+  let hist = [], idx = -1;
+
+  g("v1").innerHTML = Object.keys(CLASSES).map(c=>`<button data-c="${c}">${c}</button>`).join("");
+  g("v1").querySelectorAll("button").forEach(b => b.onclick = () => {
+    cls = b.dataset.c; localStorage.setItem("cls", cls);
+    pool = []; recent = []; hist = []; idx = -1;
+    g("v1").hidden = true; g("v2").hidden = false;
+    g("chg").textContent = "◂ " + cls;
+    try { pw.resizeTo(300, 150); } catch(e) {}
+    paintMode(); down();
+  });
+
+  const paintMode = () => {
+    g("md").textContent = mode === "random" ? "🎲" : "🔁";
+    g("md").title = mode === "random" ? "Völlig zufällig" : "Alle einmal, dann neu mischen";
+  };
+  g("md").onclick = () => { mode = mode === "random" ? "round" : "random"; localStorage.setItem("mode", mode); pool = []; recent = []; paintMode(); };
+  g("chg").onclick = () => { g("v2").hidden = true; g("v1").hidden = false; try { pw.resizeTo(340, 210); } catch(e) {} };
+
+  const show = () => { g("nm").textContent = hist[idx]; };
+  const down = () => { if (idx < hist.length - 1) idx++; else { hist.push(pickName()); idx = hist.length - 1; } show(); };
+  const up = () => { if (idx > 0) { idx--; show(); } };
+  g("dn").onclick = down; g("up").onclick = up;
+  d.addEventListener("keydown", e => {
+    if (g("v2").hidden) return;
+    if (["Space","Enter","ArrowDown","ArrowRight"].includes(e.code)) { e.preventDefault(); down(); }
+    if (["ArrowUp","ArrowLeft"].includes(e.code)) { e.preventDefault(); up(); }
+  });
+  pw.addEventListener("pagehide", () => { pipMode = false; });
+};
+</script>
+</body>
+</html>
